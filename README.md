@@ -17,11 +17,24 @@ with `callvote mode 1v1` (also `2v2`, `TDM`, `FFA`). CTF needs CTF maps, which
 the demo content doesn't have. Set `Q3_GAME=baseq3` in `quake3.conf` for
 vanilla Quake 3.
 
+## Players
+
+Opening the page shows a join screen: player name, name color, mouse
+sensitivity and field of view. They're saved in that browser's local storage
+and passed to the game before it connects, so every player has their own
+name and settings; nothing about a player is stored on the server. The game
+keeps its own config (key binds, model, everything set from the Esc menu) in
+the browser's IndexedDB, also per player. Two people sharing one browser
+profile share settings; a private window or another browser gives a fresh one.
+
+First visit in a browser: the game shows the Quake III demo license once
+("I Agree"), then downloads ~100 MB of game data, cached afterwards.
+
 ## What runs on the appliance
 
 | Unit            | Process              | Listens on                          |
 |-----------------|----------------------|-------------------------------------|
-| `cz-quake3-web` | `node web.js`        | `0.0.0.0:8080` page, assets, WS proxy |
+| `cz-quake3-web` | `node web.js`        | `0.0.0.0:8080` page, assets, WS proxy, `/server.json` |
 | `cz-quake3`     | `node ioq3ded.js`    | `127.0.0.1:27960` game (WebSocket)  |
 
 Both run as the unprivileged `q3server` user in sandboxed, memory/CPU-capped

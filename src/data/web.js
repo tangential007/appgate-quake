@@ -1,5 +1,6 @@
 'use strict';
 // Single-port front end for the browser Quake 3 server, no dependencies.
+//   GET  /server.json          {"game": Q3_GAME} for the join screen
 //   GET  /...                  static files (game page, client, assets)
 //   WebSocket upgrade on any   raw TCP pass-through to the game server on
 //   path                       127.0.0.1:GAME_PORT, with X-Forwarded-For set
@@ -13,6 +14,9 @@ const path = require('path');
 const PORT = parseInt(process.env.WEB_PORT || '8080', 10);
 const GAME_PORT = parseInt(process.env.GAME_PORT || '27960', 10);
 const ROOT = path.resolve(process.env.WEB_ROOT || path.join(__dirname, 'html'));
+// The client must start in the server's game dir: switching on connect makes
+// the engine reset every cvar, which wipes the player's name and settings.
+const GAME = /^[a-z0-9_]+$/.test(process.env.Q3_GAME || '') ? process.env.Q3_GAME : 'baseq3';
 
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -39,6 +43,12 @@ const server = http.createServer((req, res) => {
     rel = decodeURIComponent(new URL(req.url, 'http://local').pathname);
   } catch (e) {
     return send(res, 400);
+  }
+  if (rel === '/server.json') {
+    const body = JSON.stringify({ game: GAME });
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache',
+      'Content-Length': Buffer.byteLength(body), 'X-Content-Type-Options': 'nosniff' });
+    return res.end(req.method === 'HEAD' ? undefined : body);
   }
   if (rel.endsWith('/')) rel += 'index.html';
   const file = path.join(ROOT, path.normalize(rel));

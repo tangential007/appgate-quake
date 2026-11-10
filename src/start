@@ -62,7 +62,7 @@ SANDBOX="-p NoNewPrivileges=yes -p PrivateTmp=yes -p ProtectHome=yes -p ProtectS
 systemd-run --unit="$WEB" --description="Quake 3 web front end (Appgate customization)" \
     --uid="$Q3_USER" --gid="$Q3_USER" \
     --setenv=WEB_PORT="$WEB_PORT" --setenv=GAME_PORT="$GAME_PORT" \
-    --setenv=WEB_ROOT="$BASE/html" \
+    --setenv=WEB_ROOT="$BASE/html" --setenv=Q3_GAME="$Q3_GAME" \
     -p MemoryMax=256M -p Nice=10 \
     -p Restart=on-failure -p RestartSec=10 \
     $SANDBOX \
