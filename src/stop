@@ -1,0 +1,20 @@
+#!/bin/sh
+# Appgate appliance customization: stop the browser Quake 3 server.
+# Called before upgrades and before a new customization starts.
+# Installed paks, server.cfg and the service account are kept.
+CHAIN=CZ-QUAKE3
+
+for u in cz-quake3 cz-quake3-web; do
+    systemctl stop "$u" 2>/dev/null
+    systemctl reset-failed "$u" 2>/dev/null
+done
+
+if command -v iptables >/dev/null 2>&1; then
+    while iptables -D INPUT -j "$CHAIN" 2>/dev/null; do :; done
+    iptables -F "$CHAIN" 2>/dev/null
+    iptables -X "$CHAIN" 2>/dev/null
+fi
+
+command -v auditgen >/dev/null 2>&1 && auditgen cz-quake3 event_type=stopped
+logger -t cz-quake3 "stopped"
+exit 0

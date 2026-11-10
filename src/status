@@ -1,0 +1,41 @@
+#!/bin/sh
+# Appgate appliance customization health check (read-only).
+# Exit 0 = healthy, 6 = warning, anything else = error.
+BASE=/opt/customization/data
+CHAIN=CZ-QUAKE3
+# shellcheck source-path=SCRIPTDIR source=data/quake3.conf
+. "$BASE/quake3.conf"
+
+for u in cz-quake3-web cz-quake3; do
+    if ! systemctl is-active --quiet "$u"; then
+        echo "Quake 3: $u is not running ($(systemctl is-active "$u" 2>/dev/null))"
+        exit 1
+    fi
+done
+
+# The engine can lose its game module while node keeps running.
+inv="$(systemctl show -p InvocationID --value cz-quake3 2>/dev/null)"
+if [ -n "$inv" ] && journalctl -q --no-pager "_SYSTEMD_INVOCATION_ID=$inv" 2>/dev/null \
+        | grep -q "Server crashed:"; then
+    echo "Quake 3 server crashed; run: systemctl restart cz-quake3"
+    exit 1
+fi
+
+if command -v iptables >/dev/null 2>&1 && ! iptables -C INPUT -j "$CHAIN" 2>/dev/null; then
+    echo "Quake 3 running but firewall rule for tcp/$WEB_PORT is missing (appliance firewall reloaded?)"
+    exit 6
+fi
+
+if command -v ss >/dev/null 2>&1; then
+    if ! ss -Hltn "sport = :$WEB_PORT" | grep -q .; then
+        echo "Quake 3 web front end not listening on tcp/$WEB_PORT yet"
+        exit 6
+    fi
+    if ! ss -Hltn "sport = :$GAME_PORT" | grep -q .; then
+        echo "Quake 3 game server still starting (installing paks on first run?)"
+        exit 6
+    fi
+fi
+
+echo "Quake 3 running on tcp/$WEB_PORT"
+exit 0

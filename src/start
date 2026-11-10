@@ -1,0 +1,88 @@
+#!/bin/sh
+# Appgate appliance customization: Quake III Arena (demo) in the browser.
+# Runs as root on boot or when the customization changes, and returns quickly.
+# Two sandboxed transient units under an unprivileged user:
+#   cz-quake3-web  node web.js       page + assets + WebSocket proxy, WEB_PORT
+#   cz-quake3      node ioq3ded.js   game server, 127.0.0.1:GAME_PORT only
+set -eu
+
+BASE=/opt/customization/data
+WEB=cz-quake3-web
+GAME=cz-quake3
+CHAIN=CZ-QUAKE3
+# shellcheck source-path=SCRIPTDIR source=data/quake3.conf
+. "$BASE/quake3.conf"
+
+log() { logger -t cz-quake3 "$*"; echo "$*"; }
+
+if ! id "$Q3_USER" >/dev/null 2>&1; then
+    useradd --system --no-create-home --home-dir "$Q3_HOME" \
+            --shell /usr/sbin/nologin "$Q3_USER"
+    log "created user $Q3_USER"
+fi
+
+chmod -R a+rX "$BASE" 2>/dev/null || true
+chmod 0755 "$BASE/node" 2>/dev/null || true
+
+# Paks are installed here by the server on first start (downloaded from
+# web.js), along with logs. server.cfg is seeded once, then left alone.
+mkdir -p "$Q3_HOME/base/baseq3"
+[ -f "$Q3_HOME/base/baseq3/server.cfg" ] || cp "$BASE/server.cfg" "$Q3_HOME/base/baseq3/"
+chown -R "$Q3_USER:$Q3_USER" "$Q3_HOME"
+chmod 0750 "$Q3_HOME"
+
+# Firewall: only the web port, only from Q3_ALLOW_FROM.
+if command -v iptables >/dev/null 2>&1; then
+    iptables -N "$CHAIN" 2>/dev/null || iptables -F "$CHAIN"
+    for net in $Q3_ALLOW_FROM; do
+        iptables -A "$CHAIN" -s "$net" -p tcp --dport "$WEB_PORT" -j ACCEPT
+    done
+    iptables -C INPUT -j "$CHAIN" 2>/dev/null || iptables -I INPUT 1 -j "$CHAIN"
+    log "firewall: tcp/$WEB_PORT allowed from $Q3_ALLOW_FROM"
+else
+    log "WARNING: iptables not found; port $WEB_PORT not opened"
+fi
+
+for u in "$GAME" "$WEB"; do
+    systemctl stop "$u" 2>/dev/null || true
+    systemctl reset-failed "$u" 2>/dev/null || true
+done
+
+SANDBOX="-p NoNewPrivileges=yes -p PrivateTmp=yes -p ProtectHome=yes -p ProtectSystem=strict"
+
+# shellcheck disable=SC2086
+systemd-run --unit="$WEB" --description="Quake 3 web front end (Appgate customization)" \
+    --uid="$Q3_USER" --gid="$Q3_USER" \
+    --setenv=WEB_PORT="$WEB_PORT" --setenv=GAME_PORT="$GAME_PORT" \
+    --setenv=WEB_ROOT="$BASE/html" \
+    -p MemoryMax=256M -p Nice=10 \
+    -p Restart=on-failure -p RestartSec=10 \
+    $SANDBOX \
+    "$BASE/node" "$BASE/web.js"
+
+# The game server fetches its paks from the web front end on first start.
+i=0
+until ss -Hltn "sport = :$WEB_PORT" | grep -q . || [ $i -ge 10 ]; do
+    sleep 1; i=$((i + 1))
+done
+
+# shellcheck disable=SC2086
+systemd-run --unit="$GAME" --description="Quake 3 server (Appgate customization)" \
+    --uid="$Q3_USER" --gid="$Q3_USER" \
+    --setenv=HOME="$Q3_HOME" \
+    -p WorkingDirectory="$Q3_HOME" \
+    -p MemoryMax="$Q3_MEMORY_MAX" -p CPUQuota="$Q3_CPU_QUOTA" -p Nice=10 \
+    -p Restart=on-failure -p RestartSec=15 -p TimeoutStopSec=30 \
+    -p ReadWritePaths="$Q3_HOME" \
+    $SANDBOX \
+    "$BASE/node" "$BASE/server/ioq3ded.js" \
+        +set com_hunkMegs "$Q3_HUNK_MEGS" \
+        +set fs_cdn "127.0.0.1:$WEB_PORT" \
+        +set fs_game baseq3 \
+        +set net_ip 127.0.0.1 +set net_port "$GAME_PORT" \
+        +set dedicated 1 +exec server.cfg
+
+command -v auditgen >/dev/null 2>&1 && \
+    auditgen cz-quake3 event_type=started port="$WEB_PORT" || true
+log "started $WEB and $GAME; play at http://<appliance>:$WEB_PORT/"
+exit 0
