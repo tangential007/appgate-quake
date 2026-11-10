@@ -30,3 +30,17 @@
 }
 #j-form button:hover { background: #ef7230; }
 .j-note { margin: 14px 0 0; font-size: 12px; color: #8c8177; }
+
+#j-lock {
+  position: fixed; inset: 0; z-index: 900; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: rgba(0, 0, 0, .45);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif; color: #fff;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, .8); user-select: none;
+}
+#j-lock .j-lock-main {
+  padding: 14px 30px; border: 2px solid #ff8a3d; border-radius: 8px;
+  background: rgba(22, 20, 18, .85); font-size: 26px; font-weight: 700;
+  letter-spacing: .08em; text-transform: uppercase;
+}
+#j-lock .j-lock-sub { margin-top: 10px; font-size: 14px; color: #d8cfc6; }

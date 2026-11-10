@@ -27,6 +27,10 @@ keeps its own config (key binds, model, everything set from the Esc menu) in
 the browser's IndexedDB, also per player. Two people sharing one browser
 profile share settings; a private window or another browser gives a fresh one.
 
+Browsers only capture the mouse after a click in the page; Esc releases it.
+A "Click to play" prompt covers the game whenever it's running without the
+mouse captured, so the click that re-captures doesn't also fire a weapon.
+
 First visit in a browser: the game shows the Quake III demo license once
 ("I Agree"), then downloads ~100 MB of game data, cached afterwards.
 

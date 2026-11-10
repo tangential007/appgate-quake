@@ -86,8 +86,49 @@
           if (info && /^[a-z0-9_]+$/.test(info.game || '')) args.unshift('+set', 'fs_game', info.game);
           overlay.parentNode.removeChild(overlay);
           window.q3launch(args);
+          lockPrompt();
         });
     });
+  }
+
+  // "Click to play": browsers only capture the mouse after a click in the
+  // page, and Esc releases it. Show a prompt whenever the game is running
+  // but the mouse isn't captured; clicking it re-captures without firing.
+  function visible(id) {
+    var e = document.getElementById(id);
+    return !!(e && e.offsetParent !== null && getComputedStyle(e).display !== 'none');
+  }
+  function lockPrompt() {
+    var prompt = el('div', { id: 'j-lock', role: 'button', tabindex: '0' }, [
+      el('div', { class: 'j-lock-main' }, ['Click to play']),
+      el('div', { class: 'j-lock-sub' }, ['Esc releases the mouse']),
+    ]);
+    prompt.style.display = 'none';
+    document.body.appendChild(prompt);
+
+    function canvas() { return window.ioq3 && ioq3.canvas && document.contains(ioq3.canvas) ? ioq3.canvas : null; }
+    function locked() { return !!(document.pointerLockElement || document.mozPointerLockElement); }
+    function update() {
+      var c = canvas();
+      var busy = visible('eula-frame') || visible('loading') || visible('dialog');
+      prompt.style.display = c && !busy && !locked() ? 'flex' : 'none';
+    }
+    prompt.addEventListener('click', function (ev) {
+      ev.preventDefault();
+      ev.stopPropagation();
+      var c = canvas();
+      if (!c || !c.requestPointerLock) return;
+      var r = c.requestPointerLock();
+      // Chrome refuses a re-lock for about a second after Esc.
+      if (r && r.catch) r.catch(function () {
+        prompt.querySelector('.j-lock-main').textContent = 'Click again to play';
+      });
+    });
+    document.addEventListener('pointerlockchange', function () {
+      prompt.querySelector('.j-lock-main').textContent = 'Click to play';
+      update();
+    });
+    setInterval(update, 300);
   }
 
   if (document.readyState === 'loading') {
