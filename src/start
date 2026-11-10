@@ -25,9 +25,17 @@ chmod -R a+rX "$BASE" 2>/dev/null || true
 chmod 0755 "$BASE/node" 2>/dev/null || true
 
 # Paks are installed here by the server on first start (downloaded from
-# web.js), along with logs. server.cfg is seeded once, then left alone.
-mkdir -p "$Q3_HOME/base/baseq3"
-[ -f "$Q3_HOME/base/baseq3/server.cfg" ] || cp "$BASE/server.cfg" "$Q3_HOME/base/baseq3/"
+# web.js), along with logs. Each game dir's server.cfg is seeded once,
+# then left alone.
+Q3_GAME="${Q3_GAME:-baseq3}"
+case "$Q3_GAME" in
+    cpma)   CFG="$BASE/server-cpma.cfg" ;;
+    baseq3) CFG="$BASE/server.cfg" ;;
+    *) log "unknown Q3_GAME '$Q3_GAME' (use cpma or baseq3)"; exit 1 ;;
+esac
+mkdir -p "$Q3_HOME/base/baseq3" "$Q3_HOME/base/$Q3_GAME"
+[ -f "$Q3_HOME/base/$Q3_GAME/server.cfg" ] || cp "$CFG" "$Q3_HOME/base/$Q3_GAME/server.cfg"
+touch "$Q3_HOME/base/$Q3_GAME/filters.txt"   # IP ban list (addip); empty is fine
 chown -R "$Q3_USER:$Q3_USER" "$Q3_HOME"
 chmod 0750 "$Q3_HOME"
 
@@ -78,11 +86,11 @@ systemd-run --unit="$GAME" --description="Quake 3 server (Appgate customization)
     "$BASE/node" "$BASE/server/ioq3ded.js" \
         +set com_hunkMegs "$Q3_HUNK_MEGS" \
         +set fs_cdn "127.0.0.1:$WEB_PORT" \
-        +set fs_game baseq3 \
+        +set fs_game "$Q3_GAME" \
         +set net_ip 127.0.0.1 +set net_port "$GAME_PORT" \
         +set dedicated 1 +exec server.cfg
 
 command -v auditgen >/dev/null 2>&1 && \
     auditgen cz-quake3 event_type=started port="$WEB_PORT" || true
-log "started $WEB and $GAME; play at http://<appliance>:$WEB_PORT/"
+log "started $WEB and $GAME ($Q3_GAME); play at http://<appliance>:$WEB_PORT/"
 exit 0

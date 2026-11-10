@@ -10,6 +10,13 @@ Content is the freely distributable **Quake III Arena demo** plus the 1.32
 point release: q3dm1, q3dm7, q3dm17, q3tourney2 and the pro-* maps. The demo
 license ships in the package as `data/Q3DEMO-EULA.txt`.
 
+By default the server runs **CPMA (Challenge ProMode Arena) 1.48**: CPM
+physics (air control, faster movement), FFA to start, and the arena maps
+cpm1a, cpm22 and cpm3a on top of the demo maps. Players switch modes in game
+with `callvote mode 1v1` (also `2v2`, `TDM`, `FFA`). CTF needs CTF maps, which
+the demo content doesn't have. Set `Q3_GAME=baseq3` in `quake3.conf` for
+vanilla Quake 3.
+
 ## What runs on the appliance
 
 | Unit            | Process              | Listens on                          |
@@ -28,7 +35,7 @@ setting `X-Forwarded-For` so the server sees each player's real address.
     ./build.sh --accept-eula
 
 Needs git, npm, python3, zip. Sources are pinned to specific commits and npm
-versions (Node 22 runtime, ws 0.4.32). Output: `appgate-quake3.zip`, ~140 MB
+versions (Node 22 runtime, ws 0.4.32). Output: `appgate-quake3.zip`, ~150 MB
 (Appgate limit is 200 MB).
 
 ## Deploy
@@ -51,7 +58,13 @@ versions (Node 22 runtime, ws 0.4.32). Output: `appgate-quake3.zip`, ~140 MB
 
     systemctl status cz-quake3 cz-quake3-web
     journalctl -u cz-quake3 -f
-    nano /var/lib/cz-quake3/base/baseq3/server.cfg && systemctl restart cz-quake3
+    nano /var/lib/cz-quake3/base/cpma/server.cfg && systemctl restart cz-quake3
+    # (base/baseq3/server.cfg when Q3_GAME=baseq3)
+
+Switching `Q3_GAME`: edit `/opt/customization/data/quake3.conf` and re-run
+`/opt/customization/start` (or rebuild with the change in `src/data/quake3.conf`).
+In `server.cfg`, `server_gameplay` picks CPM or VQ3 physics and `mode_start`
+the starting mode.
 
 In-game: Esc for the menu; the backquote key (`` ` ``) opens the console.
 

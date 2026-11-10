@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Build an Appgate appliance customization zip that serves Quake III Arena
-# (free demo content) to web browsers, using QuakeJS.
+# (free demo content, plus the CPMA mod) to web browsers, using QuakeJS.
 #
 #   ./build.sh --accept-eula [--out quake3.zip]
 #
@@ -101,11 +101,9 @@ echo "==> Demo content"
 A="$WORK/qdocker/include/assets"
 cp "$A"/*-linuxq3ademo-*.sh "$A"/*-linuxq3apoint-*.run "$D/html/assets/"
 cp "$A"/baseq3/*.pk3 "$D/html/assets/baseq3/"
-python3 - "$A/manifest.json" "$D/html/assets/manifest.json" <<'PY'
-import json, sys
-entries = [e for e in json.load(open(sys.argv[1])) if not e["name"].startswith("cpma/")]
-json.dump(entries, open(sys.argv[2], "w"), indent=2)
-PY
+mkdir -p "$D/html/assets/cpma"
+cp "$A"/cpma/*.pk3 "$D/html/assets/cpma/"     # Challenge ProMode Arena mod + maps
+cp "$A/manifest.json" "$D/html/assets/manifest.json"
 # The demo license must accompany every copy.
 python3 - "$D/server/ioq3ded.js" "$D/Q3DEMO-EULA.txt" <<'PY'
 import json, re, sys
@@ -117,10 +115,10 @@ grep -q "LIMITED USE SOFTWARE LICENSE AGREEMENT" "$D/Q3DEMO-EULA.txt"
 
 echo "==> Assembling package"
 cp "$SRC/start" "$SRC/stop" "$SRC/status" "$SRC/metadata.txt" "$PKG/"
-cp "$SRC/data/quake3.conf" "$SRC/data/server.cfg" "$SRC/data/web.js" "$D/"
+cp "$SRC/data/quake3.conf" "$SRC/data/server.cfg" "$SRC/data/server-cpma.cfg" "$SRC/data/web.js" "$D/"
 printf 'Accepted at build time %s\n' "$(date -u +%FT%TZ)" > "$D/EULA-ACCEPTED"
 sed -i 's/\r$//' "$PKG/start" "$PKG/stop" "$PKG/status" "$PKG/metadata.txt" \
-    "$D/quake3.conf" "$D/server.cfg" "$D/web.js"
+    "$D/quake3.conf" "$D/server.cfg" "$D/server-cpma.cfg" "$D/web.js"
 chmod 0755 "$PKG/start" "$PKG/stop" "$PKG/status" "$D/node"
 
 rm -f "$OUT"
