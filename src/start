@@ -9,7 +9,7 @@ set -eu
 BASE=/opt/customization/data
 WEB=cz-quake3-web
 GAME=cz-quake3
-CHAIN=CZ-QUAKE3
+FW=cz-quake3-fw
 # shellcheck source-path=SCRIPTDIR source=data/quake3.conf
 . "$BASE/quake3.conf"
 
@@ -39,17 +39,19 @@ touch "$Q3_HOME/base/$Q3_GAME/filters.txt"   # IP ban list (addip); empty is fin
 chown -R "$Q3_USER:$Q3_USER" "$Q3_HOME"
 chmod 0750 "$Q3_HOME"
 
-# Firewall: only the web port, only from Q3_ALLOW_FROM.
+# Firewall: only the web port, only from Q3_ALLOW_FROM. A timer re-applies
+# it every 30 s, because the appliance's own firewall rebuilds remove it.
 if command -v iptables >/dev/null 2>&1; then
-    iptables -N "$CHAIN" 2>/dev/null || iptables -F "$CHAIN"
-    for net in $Q3_ALLOW_FROM; do
-        iptables -A "$CHAIN" -s "$net" -p tcp --dport "$WEB_PORT" -j ACCEPT
-    done
-    iptables -C INPUT -j "$CHAIN" 2>/dev/null || iptables -I INPUT 1 -j "$CHAIN"
+    sh "$BASE/firewall.sh"
     log "firewall: tcp/$WEB_PORT allowed from $Q3_ALLOW_FROM"
 else
     log "WARNING: iptables not found; port $WEB_PORT not opened"
 fi
+systemctl stop "$FW.timer" "$FW.service" 2>/dev/null || true
+systemctl reset-failed "$FW.timer" "$FW.service" 2>/dev/null || true
+systemd-run --unit="$FW" --description="Quake 3 firewall keeper (Appgate customization)" \
+    --on-active=30s --on-unit-active=30s --timer-property=AccuracySec=5s \
+    /bin/sh "$BASE/firewall.sh"
 
 for u in "$GAME" "$WEB"; do
     systemctl stop "$u" 2>/dev/null || true

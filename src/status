@@ -22,7 +22,7 @@ if [ -n "$inv" ] && journalctl -q --no-pager "_SYSTEMD_INVOCATION_ID=$inv" 2>/de
 fi
 
 if command -v iptables >/dev/null 2>&1 && ! iptables -C INPUT -j "$CHAIN" 2>/dev/null; then
-    echo "Quake 3 running but firewall rule for tcp/$WEB_PORT is missing (appliance firewall reloaded?)"
+    echo "Quake 3 running but firewall rule for tcp/$WEB_PORT is missing; it is re-applied within 30 s (check: systemctl status cz-quake3-fw.timer)"
     exit 6
 fi
 

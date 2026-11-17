@@ -91,5 +91,8 @@ In-game: Esc for the menu; the backquote key (`` ` ``) opens the console.
   `tcpdump -ni any tcp port 8080`.
 - Page loads but "connection refused"/stuck: `ss -ltn 'sport = :27960'` and
   `journalctl -u cz-quake3 -n 50`.
-- `stop` removes the firewall chain; to apply config changes just re-run
+- The appliance rebuilds its firewall on reboots and config changes, which
+  removes `CZ-QUAKE3`. A timer (`cz-quake3-fw.timer`) re-applies it every 30 s
+  and logs each repair: `journalctl -t cz-quake3 | grep firewall`.
+- `stop` removes the firewall chain (and the timer); to apply config changes just re-run
   `/opt/customization/start`.

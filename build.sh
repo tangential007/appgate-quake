@@ -125,10 +125,10 @@ grep -q "LIMITED USE SOFTWARE LICENSE AGREEMENT" "$D/Q3DEMO-EULA.txt"
 
 echo "==> Assembling package"
 cp "$SRC/start" "$SRC/stop" "$SRC/status" "$SRC/metadata.txt" "$PKG/"
-cp "$SRC/data/quake3.conf" "$SRC/data/server.cfg" "$SRC/data/server-cpma.cfg" "$SRC/data/web.js" "$D/"
+cp "$SRC/data/quake3.conf" "$SRC/data/server.cfg" "$SRC/data/server-cpma.cfg" "$SRC/data/web.js" "$SRC/data/firewall.sh" "$D/"
 printf 'Accepted at build time %s\n' "$(date -u +%FT%TZ)" > "$D/EULA-ACCEPTED"
 sed -i 's/\r$//' "$PKG/start" "$PKG/stop" "$PKG/status" "$PKG/metadata.txt" \
-    "$D/quake3.conf" "$D/server.cfg" "$D/server-cpma.cfg" "$D/web.js"
+    "$D/quake3.conf" "$D/server.cfg" "$D/server-cpma.cfg" "$D/web.js" "$D/firewall.sh"
 chmod 0755 "$PKG/start" "$PKG/stop" "$PKG/status" "$D/node"
 
 rm -f "$OUT"
